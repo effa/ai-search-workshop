@@ -159,8 +159,7 @@ def show_state(state):
             put_img('asteroid', pos)
 
 
-def show_plan(state, plan):
-    print(plan)
+def show_plan(state, plan, interactive=False):
     if type(plan) != str:
         raise ValueError("Plan musi byt retezec akci.")
     if any(a not in 'lfr' for a in plan):
@@ -171,18 +170,27 @@ def show_plan(state, plan):
     def show_plan_step(step):
         state = states[step]
         state.show()
+        message = "Plan: '{plan}'".format(plan=plan)
+        plt.text(0, -0.4, message,
+            fontsize=15,
+            horizontalalignment='left',
+            verticalalignment='center',
+            bbox={'facecolor': 'tab:green'})
         for i in range(len(states) - 1):
             start = states[i].spaceship
             end = states[i+1].spaceship
             xs = [start.col + 0.5, end.col + 0.5]
             ys = [state.n - start.row - 0.5, state.n - end.row - 0.5]
-            plt.plot(xs, ys, 'bo-')
+            plt.plot(xs, ys, 'o-', color='tab:green')
 
-    step = widgets.IntSlider(
-        min=0, max=len(plan),
-        value=0,
-        description='Krok')
-    return widgets.interact(show_plan_step, step=step)
+    if interactive:
+        step = widgets.IntSlider(
+            min=0, max=len(plan),
+            value=0,
+            description='Krok')
+        return widgets.interact(show_plan_step, step=step)
+    else:
+        show_plan_step(step=0)
 
 
 # --------------------------------------------------------------------------
@@ -212,26 +220,25 @@ def show_search_tree(tree, fringe, explored):
         end = parent.spaceship
         xs = [start.col + 0.5, end.col + 0.5]
         ys = [state.n - start.row - 0.5, state.n - end.row - 0.5]
-        plt.plot(xs, ys, 'go-')
+        plt.plot(xs, ys, 'o-', color='tab:blue')
     # mark explored
     xs = [s.spaceship.col + 0.5 for s in explored]
     ys = [state.n - s.spaceship.row - 0.5 for s in explored]
     labels = [str(i+1) for i in range(len(explored))]
-    #plt.plot(xs, ys, 'gD')
     for label, x, y in zip(labels, xs, ys):
         #plt.annotate(label, xy=(x, y))
         plt.text(
             x, y, label,
             horizontalalignment='center',
             verticalalignment='center',
-            bbox={'facecolor': 'green', 'pad': 5})
+            bbox={'facecolor': 'tab:blue', 'pad': 5})
     # mark fringe
     xs = [s.spaceship.col + 0.5 for s in fringe]
     ys = [state.n - s.spaceship.row - 0.5 for s in fringe]
-    plt.plot(xs, ys, 'rs')
+    plt.plot(xs, ys, 's', color='tab:red')
 
 
-def create_tree_search_widget(explored_states, trees, fringes):
+def create_tree_search_widget(explored_states, trees, fringes, interactive=False):
     if not trees:
         print('Zadne stromy k zobrazeni.')
         return
@@ -242,11 +249,14 @@ def create_tree_search_widget(explored_states, trees, fringes):
         show_search_tree(
             tree, fringe=fringe, explored=explored_states[:step])
 
-    step = widgets.IntSlider(
-        min=0, max=len(explored_states),
-        value=len(explored_states),
-        description='Krok')
-    return widgets.interact(show_search_tree_at, step=step)
+    if interactive:
+        step = widgets.IntSlider(
+            min=0, max=len(explored_states),
+            value=len(explored_states),
+            description='Krok')
+        return widgets.interact(show_search_tree_at, step=step)
+    else:
+        show_search_tree_at(step=len(explored_states))
 
 
 class Logger:
@@ -264,9 +274,9 @@ class Logger:
         self.fringes = [set()]
         self.log('start search')
 
-    def end_search(self):
+    def end_search(self, interactive=False):
         create_tree_search_widget(
-            self.explored_states, self.trees, self.fringes)
+            self.explored_states, self.trees, self.fringes, interactive=interactive)
 
     def log(self, message):
         step = len(self.explored_states)
@@ -281,9 +291,10 @@ class Logger:
         last_fringe = self.fringes[-1]
         tree = deepcopy(last_tree)
         #new_explored_states = last_fringe - fringe
-        new_seen_states = fringe - last_fringe
-        for new_seen_state in new_seen_states:
-            tree[new_seen_state] = explored_state
+        for action in actions(explored_state):
+            next_state = move(explored_state, action)
+            if next_state in fringe:
+                tree[next_state] = explored_state
         self.explored_states.append(explored_state)
         self.trees.append(tree)
         self.fringes.append(fringe)
@@ -294,10 +305,10 @@ LOGGER = Logger()
 LOGGER.set_output(text=False, widget=True)
 
 @contextmanager
-def visualize_search(state, order=True, costs=False):
+def visualize_search(state, interactive=False, costs=False):
     LOGGER.start_search(state)
     yield
-    LOGGER.end_search()
+    LOGGER.end_search(interactive=interactive)
 
 
 def log_search_step(explored_state, fringe):
