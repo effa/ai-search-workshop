@@ -239,7 +239,7 @@ def get_root(parents):
 #    return State(world)
 
 
-def show_search_tree(tree, fringe, explored, costs=None):
+def show_search_tree(tree, fringe, explored, costs=None, heuristic=None):
     state = explored[-1] if explored else get_root(tree)
     show_state(state)
     for child, parent in tree.items():
@@ -250,9 +250,18 @@ def show_search_tree(tree, fringe, explored, costs=None):
     xs = [s.spaceship.col + 0.5 for s in explored]
     ys = [state.n - s.spaceship.row - 0.5 for s in explored]
     if costs:
-        labels = [
-            '{order}\nc={cost}'.format(order=i, cost=costs[s])
-            for i, s in enumerate(explored, start=1)]
+        if heuristic:
+            labels = [
+                '{order}\n{g}+{h}={f}'.format(
+                    order=i,
+                    g=costs[s],
+                    h=heuristic[s],
+                    f=costs[s]+heuristic[s])
+                for i, s in enumerate(explored, start=1)]
+        else:
+            labels = [
+                '{order}\nc={cost}'.format(order=i, cost=costs[s])
+                for i, s in enumerate(explored, start=1)]
     else:
         labels = [str(i) for i in range(1,len(explored)+1)]
     for label, x, y in zip(labels, xs, ys):
@@ -269,6 +278,14 @@ def show_search_tree(tree, fringe, explored, costs=None):
         labels = [
             '{order}\nc={cost}'.format(order='?', cost=costs[s])
             for s in fringe]
+        if heuristic:
+            labels = [
+                '{order}\n{g}+{h}={f}'.format(
+                    order='?',
+                    g=costs[s],
+                    h=heuristic[s],
+                    f=costs[s]+heuristic[s])
+                for s in fringe]
         for label, x, y in zip(labels, xs, ys):
             plt.text(
                 x, y, label,
@@ -280,7 +297,8 @@ def show_search_tree(tree, fringe, explored, costs=None):
 
 
 def create_tree_search_widget(explored_states, trees, fringes,
-                              costs=None, interactive=False):
+                              costs=None, heuristic=None,
+                              interactive=False):
     if not trees:
         print('Zadne stromy k zobrazeni.')
         return
@@ -292,6 +310,7 @@ def create_tree_search_widget(explored_states, trees, fringes,
             tree,
             fringe=fringe,
             costs=costs[step] if costs else None,
+            heuristic=heuristic[step] if heuristic else None,
             explored=explored_states[:step])
 
     if interactive:
@@ -313,17 +332,20 @@ class Logger:
         self.output_text = text
         self.output_widget = widget
 
-    def start_search(self, state, costs=False):
+    def start_search(self, state, costs=False, heuristic=False):
         self.explored_states = []
         self.trees = [{state: None}]
         self.fringes = [set([state])]
         self.costs = [{state: 0}] if costs else None
+        # TODO: fix hodnota heuristiky v pocatecnim stavu
+        # (neni jasne jak, mozna post-fix po prvnim zalognuti)
+        self.heuristic = [{state: 0}] if heuristic else None
         self.log('start search')
 
     def end_search(self, interactive=False):
         create_tree_search_widget(
             self.explored_states, self.trees, self.fringes,
-            costs=self.costs,
+            costs=self.costs, heuristic=self.heuristic,
             interactive=interactive)
 
     def log(self, message):
@@ -332,7 +354,7 @@ class Logger:
             print('{step}: {message}'.format(
                 step=step, message=message))
 
-    def log_search_step(self, explored_state, fringe, costs=None):
+    def log_search_step(self, explored_state, fringe, costs=None, heuristic=None):
         # TODO: check type of states from fringe
         fringe = set(state for state in fringe)
         last_tree = self.trees[-1]
@@ -350,6 +372,10 @@ class Logger:
             if costs is None:
                 raise ValueError('Zadejte i ceny stavu.')
             self.costs.append(deepcopy(costs))
+        if self.heuristic:
+            if heuristic is None:
+                raise ValueError('Zadejte i heuristiky.')
+            self.heuristic.append(deepcopy(heuristic))
         self.log(str(fringe))
 
 
@@ -357,11 +383,12 @@ LOGGER = Logger()
 LOGGER.set_output(text=False, widget=True)
 
 @contextmanager
-def visualize_search(state, interactive=False, costs=False):
-    LOGGER.start_search(state, costs=costs)
+def visualize_search(state, interactive=False, costs=False, heuristic=False):
+    LOGGER.start_search(state, costs=costs, heuristic=heuristic)
     yield
     LOGGER.end_search(interactive=interactive)
 
 
-def log_search_step(explored_state, fringe, costs=None):
-    LOGGER.log_search_step(explored_state, fringe, costs=costs)
+def log_search_step(explored_state, fringe, costs=None, heuristic=None):
+    LOGGER.log_search_step(
+        explored_state, fringe, costs=costs, heuristic=heuristic)
