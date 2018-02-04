@@ -230,16 +230,16 @@ def get_root(parents):
         if parent is None:
             return child
 
-def costs_as_state(costs, heuristic=None):
-    heuristic = heuristic or (lambda x: 0)
-    world = next(iter(costs.keys())).world.copy()
-    for state in costs.keys():
-        total_cost = costs[state] + heuristic(state)
-        world[state.spaceship] = str(total_cost)
-    return State(world)
+#def costs_as_state(costs, heuristic=None):
+#    heuristic = heuristic or (lambda x: 0)
+#    world = next(iter(costs.keys())).world.copy()
+#    for state in costs.keys():
+#        total_cost = costs[state] + heuristic(state)
+#        world[state.spaceship] = str(total_cost)
+#    return State(world)
 
 
-def show_search_tree(tree, fringe, explored):
+def show_search_tree(tree, fringe, explored, costs=None):
     state = explored[-1] if explored else get_root(tree)
     show_state(state)
     for child, parent in tree.items():
@@ -249,21 +249,38 @@ def show_search_tree(tree, fringe, explored):
     # mark explored
     xs = [s.spaceship.col + 0.5 for s in explored]
     ys = [state.n - s.spaceship.row - 0.5 for s in explored]
-    labels = [str(i+1) for i in range(len(explored))]
+    if costs:
+        labels = [
+            '{order}\nc={cost}'.format(order=i, cost=costs[s])
+            for i, s in enumerate(explored, start=1)]
+    else:
+        labels = [str(i) for i in range(1,len(explored)+1)]
     for label, x, y in zip(labels, xs, ys):
         #plt.annotate(label, xy=(x, y))
         plt.text(
             x, y, label,
             horizontalalignment='center',
             verticalalignment='center',
-            bbox={'facecolor': 'tab:blue', 'pad': 5})
+            bbox={'facecolor': 'tab:blue', 'pad': 5, 'alpha': 0.95})
     # mark fringe
     xs = [s.spaceship.col + 0.5 for s in fringe]
     ys = [state.n - s.spaceship.row - 0.5 for s in fringe]
-    plt.plot(xs, ys, 's', color='tab:red')
+    if costs:
+        labels = [
+            '{order}\nc={cost}'.format(order='?', cost=costs[s])
+            for s in fringe]
+        for label, x, y in zip(labels, xs, ys):
+            plt.text(
+                x, y, label,
+                horizontalalignment='center',
+                verticalalignment='center',
+                bbox={'facecolor': 'tab:red', 'pad': 5})
+    else:
+        plt.plot(xs, ys, 's', color='tab:red')
 
 
-def create_tree_search_widget(explored_states, trees, fringes, interactive=False):
+def create_tree_search_widget(explored_states, trees, fringes,
+                              costs=None, interactive=False):
     if not trees:
         print('Zadne stromy k zobrazeni.')
         return
@@ -272,12 +289,15 @@ def create_tree_search_widget(explored_states, trees, fringes, interactive=False
         fringe = fringes[step]
         #print('fringe at', step, 'is', str(fringe))
         show_search_tree(
-            tree, fringe=fringe, explored=explored_states[:step])
+            tree,
+            fringe=fringe,
+            costs=costs[step] if costs else None,
+            explored=explored_states[:step])
 
     if interactive:
         step = widgets.IntSlider(
             min=0, max=len(explored_states),
-            value=len(explored_states),
+            value=0,  #len(explored_states),
             description='Krok')
         return widgets.interact(show_search_tree_at, step=step)
     else:
@@ -293,15 +313,18 @@ class Logger:
         self.output_text = text
         self.output_widget = widget
 
-    def start_search(self, state):
+    def start_search(self, state, costs=False):
         self.explored_states = []
         self.trees = [{state: None}]
-        self.fringes = [set()]
+        self.fringes = [set([state])]
+        self.costs = [{state: 0}] if costs else None
         self.log('start search')
 
     def end_search(self, interactive=False):
         create_tree_search_widget(
-            self.explored_states, self.trees, self.fringes, interactive=interactive)
+            self.explored_states, self.trees, self.fringes,
+            costs=self.costs,
+            interactive=interactive)
 
     def log(self, message):
         step = len(self.explored_states)
@@ -309,7 +332,7 @@ class Logger:
             print('{step}: {message}'.format(
                 step=step, message=message))
 
-    def log_search_step(self, explored_state, fringe):
+    def log_search_step(self, explored_state, fringe, costs=None):
         # TODO: check type of states from fringe
         fringe = set(state for state in fringe)
         last_tree = self.trees[-1]
@@ -323,6 +346,10 @@ class Logger:
         self.explored_states.append(explored_state)
         self.trees.append(tree)
         self.fringes.append(fringe)
+        if self.costs:
+            if costs is None:
+                raise ValueError('Zadejte i ceny stavu.')
+            self.costs.append(deepcopy(costs))
         self.log(str(fringe))
 
 
@@ -331,10 +358,10 @@ LOGGER.set_output(text=False, widget=True)
 
 @contextmanager
 def visualize_search(state, interactive=False, costs=False):
-    LOGGER.start_search(state)
+    LOGGER.start_search(state, costs=costs)
     yield
     LOGGER.end_search(interactive=interactive)
 
 
-def log_search_step(explored_state, fringe):
-    LOGGER.log_search_step(explored_state, fringe)
+def log_search_step(explored_state, fringe, costs=None):
+    LOGGER.log_search_step(explored_state, fringe, costs=costs)
