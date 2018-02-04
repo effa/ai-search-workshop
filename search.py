@@ -190,6 +190,7 @@ def draw_move(start, end, style='o-', color='tab:green'):
 
 
 def show_plan(state, plan, interactive=False):
+    plan = plan or ''
     if type(plan) != str:
         raise ValueError("Plan musi byt retezec akci.")
     if any(a not in 'lfr' for a in plan):
