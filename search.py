@@ -5,21 +5,18 @@ from itertools import accumulate
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
 
+
 Position = namedtuple('Position', ['row', 'col'])
 
 class State:
-    def __init__(self, world):
+    def __init__(self, world, spaceship):
         # TODO: enforce immutability
         # TODO: allow for state[position]
-        self.world = world
+        self.spaceship = spaceship
+        self.world = world  # no spaceship there!
+        # assume immutable state, precompute properties
         self.n = max(pos.row for pos in world) + 1
         self.m = max(pos.col for pos in world) + 1
-        # finds spaceship
-        self.spaceship = None
-        for pos, field in world.items():
-            if field == 'S':
-                self.spaceship = pos
-                break
         # cache wormholes
         wormholes = defaultdict(list)
         for pos, field in world.items():
@@ -34,6 +31,16 @@ class State:
             self.wormhole_positions.extend(positions)
             self.wormhole_end[positions[0]] = positions[1]
             self.wormhole_end[positions[1]] = positions[0]
+
+    @property
+    def x(self):
+        col = self.spaceship.col
+        return col + 0.5
+
+    @property
+    def y(self):
+        row = self.spaceship.row
+        return self.n - row - 0.5
 
     def is_goal(self):
         return self.spaceship.row == 0
@@ -59,6 +66,7 @@ class State:
             self.world[(Position(row, col))]
             for col in range(self.m)]
                 for row in range(self.n)]
+        fields[self.spaceship.row][self.spaceship.col] = 'S'
         text = '\n'.join('|{inside}|'.format(inside='|'.join(row)) for row in fields)
         #text = text.replace(' ', '.')
         return text
@@ -66,41 +74,13 @@ class State:
     def __repr__(self):
         x = self.spaceship.col
         y = self.m - self.spaceship.row - 1
-        return 'State({x},{y})'.format(x=x,y=y)
+        return '{x}-{y}'.format(x=x,y=y)
 
     def _repr_png_(self):
         # Used by jupyter to render the output
         # (http://ipython.readthedocs.io/en/stable/api/generated/IPython.display.html)
         # Assumes matplotlib-inline mode
         self.show()
-
-def move(state, action):
-    # TODO: thow an error if the resulting state is dead (?)
-    # (or allow for representation of dead states)
-    world = state.world.copy()
-    spaceship = move_spaceship(state.spaceship, action)
-    if state.is_wormhole(spaceship):
-        spaceship = state.get_wormhole_end(spaceship)
-    world[state.spaceship] = ' '
-    world[spaceship] = 'S'
-    return State(world)
-
-
-def move_spaceship(spaceship, action):
-    dy = -1
-    dx = -1 if action == 'l' else 0 if action == 'f' else 1
-    new_spaceship = Position(
-        row=spaceship.row + dy,
-        col=spaceship.col + dx)
-    return new_spaceship
-
-
-def actions(state):
-    """Return actions that don't lead to dead state.
-    """
-    return [
-        a for a in 'lfr'
-        if state.world.get(move_spaceship(state.spaceship, a), 'A') != 'A']
 
 
 def parse_state(text):
@@ -113,7 +93,37 @@ def parse_state(text):
             world[Position(r, c)] = field
             if field == 'S':
                 spaceship = Position(r, c)
-    return State(world)
+                world[spaceship] = ' '
+    return State(world, spaceship)
+
+
+def move_spaceship(spaceship, action):
+    dy = -1
+    dx = -1 if action == 'l' else 0 if action == 'f' else 1
+    new_spaceship = Position(
+        row=spaceship.row + dy,
+        col=spaceship.col + dx)
+    return new_spaceship
+
+
+def move(state, action):
+    # TODO: thow an error if the resulting state is dead (?)
+    # (or allow for representation of dead states)
+    world = state.world.copy()
+    spaceship = move_spaceship(state.spaceship, action)
+    if state.is_wormhole(spaceship):
+        spaceship = state.get_wormhole_end(spaceship)
+#     world[state.spaceship] = ' '
+#     world[spaceship] = 'S'
+    return State(world, spaceship)
+
+
+def actions(state):
+    """Return actions that don't lead to dead state.
+    """
+    return [
+        a for a in 'lfr'
+        if state.world.get(move_spaceship(state.spaceship, a), 'A') != 'A']
 
 
 def is_goal(state):
@@ -127,7 +137,9 @@ def is_goal(state):
 
 IMAGES = {
     name: plt.imread('img/{name}.png'.format(name=name))
-    for name in ['spaceship', 'asteroid', 'background-blue-goal']}
+    for name in [
+        'spaceship', 'asteroid', 'wormhole', 'wormhole2',
+        'wormhole3', 'wormhole4', 'background-blue-goal']}
 
 
 def show_state(state):
@@ -149,7 +161,6 @@ def show_state(state):
         y = height - pos.row - 1
         ax.imshow(IMAGES[name], extent=[x, x+1, y, y+1])
 
-    put_img('spaceship', state.spaceship)
     for x in range(width):
         ax.imshow(
             IMAGES['background-blue-goal'],
@@ -157,6 +168,25 @@ def show_state(state):
     for pos, field in state.world.items():
         if field == 'A':
             put_img('asteroid', pos)
+        if field == 'W':
+            put_img('wormhole', pos)
+        if field == 'X':
+            put_img('wormhole2', pos)
+        if field == 'Y':
+            put_img('wormhole3', pos)
+        if field == 'Z':
+            put_img('wormhole4', pos)
+    put_img('spaceship', state.spaceship)
+
+
+def draw_move(start, end, style='o-', color='tab:green'):
+    xs = [start.x, end.x]
+    ys = [start.y, end.y]
+    if end.is_wormhole(end.spaceship):
+        midpos = end.get_wormhole_end(end.spaceship)
+        xs.insert(1, midpos.col + 0.5)
+        ys.insert(1, end.n - midpos.row - 0.5 )
+    plt.plot(xs, ys, style, color=color, markevery=[0, len(xs)-1])
 
 
 def show_plan(state, plan, interactive=False):
@@ -177,11 +207,7 @@ def show_plan(state, plan, interactive=False):
             verticalalignment='center',
             bbox={'facecolor': 'tab:green'})
         for i in range(len(states) - 1):
-            start = states[i].spaceship
-            end = states[i+1].spaceship
-            xs = [start.col + 0.5, end.col + 0.5]
-            ys = [state.n - start.row - 0.5, state.n - end.row - 0.5]
-            plt.plot(xs, ys, 'o-', color='tab:green')
+            draw_move(states[i], states[i+1], 'o-', 'tab:green')
 
     if interactive:
         step = widgets.IntSlider(
@@ -191,6 +217,8 @@ def show_plan(state, plan, interactive=False):
         return widgets.interact(show_plan_step, step=step)
     else:
         show_plan_step(step=0)
+
+
 
 
 # --------------------------------------------------------------------------
@@ -216,11 +244,7 @@ def show_search_tree(tree, fringe, explored):
     for child, parent in tree.items():
         if not parent:
             continue
-        start = child.spaceship
-        end = parent.spaceship
-        xs = [start.col + 0.5, end.col + 0.5]
-        ys = [state.n - start.row - 0.5, state.n - end.row - 0.5]
-        plt.plot(xs, ys, 'o-', color='tab:blue')
+        draw_move(parent, child, style='o-', color='tab:blue')
     # mark explored
     xs = [s.spaceship.col + 0.5 for s in explored]
     ys = [state.n - s.spaceship.row - 0.5 for s in explored]
