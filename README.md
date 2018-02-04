@@ -1,8 +1,9 @@
-# Search in AI
+# Planning in AI
 
-Workshop for Poznej FI 2018
+Workshop for *Poznej FI 2018*
 about standard search algorithms for artificial intelligence:
-DFS, BFS, UCS and A\*.
+greedy search, DFS, BFS, UCS, and A\*.
+See the prepared [workshop notebook](./workshop.ipynb) and [solutions](./solutions.py).
 
 
 ## Start
