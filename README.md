@@ -14,10 +14,13 @@ See the prepared [workshop notebook](./workshop.ipynb) and [solutions](./solutio
 
         $ git clone https://github.com/effa/ai-search-workshop.git
 
-3. Create a virtual environment and install needed Python packages:
+3. To install required Python packages directly, use:
 
         $ cd ai-search-workshop
         $ make install
+
+  Optionally, you may first create an isolated environment
+  (using Python3 venv, virtualenv, or Anaconda, see Makefile for details).
 
 4. Open prepared notebook:
 
