@@ -41,9 +41,8 @@ run:
 ## Using anaconda
 #
 #install-conda:
-#	conda create -n ai-search python=3.6 anaconda
+#	conda create -n ai-search python=3.6 anaconda  # TODO: + jupyter, matplotlib, pandas
 #	source activate ai-search
-#	pip install robomission
 #	jupyter nbextension enable --py widgetsnbextension --sys-prefix
 #
 #run-conda:

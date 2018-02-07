@@ -54,6 +54,19 @@ class State:
     def get_wormhole_end(self, position):
         return self.wormhole_end[position]
 
+    def at(self, position):
+        """Return state with the spaceship at different location
+
+        Args:
+            position: chess like e.g. 'c2'
+        """
+        world = self.world.copy()
+        spaceship = Position(
+            row=self.n - int(position[1]),
+            col=ord(position[0]) - ord('a'))
+        return State(world, spaceship)
+
+
     def __eq__(self, other):
         return self.world == other.world and self.spaceship == other.spaceship
 
@@ -61,20 +74,21 @@ class State:
         return hash(self.spaceship)
 
     def __str__(self):
-        # TODO: add __repr__ for debugging (State('''...''')
-        fields = [[
-            self.world[(Position(row, col))]
-            for col in range(self.m)]
-                for row in range(self.n)]
-        fields[self.spaceship.row][self.spaceship.col] = 'S'
-        text = '\n'.join('|{inside}|'.format(inside='|'.join(row)) for row in fields)
-        #text = text.replace(' ', '.')
-        return text
+        return repr(self)
+        #fields = [[
+        #    self.world[(Position(row, col))]
+        #    for col in range(self.m)]
+        #        for row in range(self.n)]
+        #fields[self.spaceship.row][self.spaceship.col] = 'S'
+        #text = '\n'.join('|{inside}|'.format(inside='|'.join(row)) for row in fields)
+        ##text = text.replace(' ', '.')
+        #return text
 
     def __repr__(self):
         x = self.spaceship.col
-        y = self.m - self.spaceship.row - 1
-        return '{x}-{y}'.format(x=x,y=y)
+        letter = chr(ord('a') + x)
+        y = self.n - self.spaceship.row
+        return '{x}{y}'.format(x=letter,y=y)
 
     def _repr_png_(self):
         # Used by jupyter to render the output
@@ -150,9 +164,16 @@ def show_state(state):
     ax.set_ylim(0, height)
     ax.grid(True)
     ax.set_xticks(range(width+1))
-    ax.set_yticks(range(height+1))
     ax.set_xticklabels([])
+    ax.set_xticks([x+0.5 for x in range(width)], minor=True)
+    ax.set_xticklabels(
+        [chr(ord('a')+i) for i in range(width)], minor=True)
+    ax.set_yticks(range(height+1))
     ax.set_yticklabels([])
+    ax.set_yticks([y+0.5 for y in range(height)], minor=True)
+    ax.set_yticklabels(
+        [str(i) for i in range(1, height+1)], minor=True)
+    ax.tick_params(axis='both', which='both',length=0)
     ax.set_aspect('equal')
     ax.patch.set_facecolor('black')
 
@@ -202,7 +223,7 @@ def show_plan(state, plan, interactive=False):
         state = states[step]
         state.show()
         message = "Plan: '{plan}'".format(plan=plan)
-        plt.text(0, -0.4, message,
+        plt.text(0, -0.6, message,
             fontsize=15,
             horizontalalignment='left',
             verticalalignment='center',
@@ -225,30 +246,19 @@ def show_plan(state, plan, interactive=False):
 # --------------------------------------------------------------------------
 # TODO: Factor out debugging tools into own module
 
-def get_root(parents):
-    for child, parent in parents.items():
-        if parent is None:
-            return child
-
-#def costs_as_state(costs, heuristic=None):
-#    heuristic = heuristic or (lambda x: 0)
-#    world = next(iter(costs.keys())).world.copy()
-#    for state in costs.keys():
-#        total_cost = costs[state] + heuristic(state)
-#        world[state.spaceship] = str(total_cost)
-#    return State(world)
+def draw_plans_as_edges(initial_state, plans):
+    for plan in plans.values():
+        state = initial_state
+        for action in plan:
+            next_state = move(state, action)
+            draw_move(state, next_state, style='o-', color='tab:blue')
+            state = next_state
 
 
-def show_search_tree(tree, fringe, explored, costs=None, heuristic=None):
-    state = explored[-1] if explored else get_root(tree)
-    show_state(state)
-    for child, parent in tree.items():
-        if not parent:
-            continue
-        draw_move(parent, child, style='o-', color='tab:blue')
-    # mark explored
-    xs = [s.spaceship.col + 0.5 for s in explored]
-    ys = [state.n - s.spaceship.row - 0.5 for s in explored]
+def draw_explored_states(explored_states, costs=None, heuristic=None):
+    explored_states = [s for s in  explored_states if s is not None]
+    xs = [s.spaceship.col + 0.5 for s in explored_states]
+    ys = [s.n - s.spaceship.row - 0.5 for s in explored_states]
     if costs:
         if heuristic:
             labels = [
@@ -257,13 +267,13 @@ def show_search_tree(tree, fringe, explored, costs=None, heuristic=None):
                     g=costs[s],
                     h=heuristic[s],
                     f=costs[s]+heuristic[s])
-                for i, s in enumerate(explored, start=1)]
+                for i, s in enumerate(explored_states, start=1)]
         else:
             labels = [
                 '{order}\nc={cost}'.format(order=i, cost=costs[s])
-                for i, s in enumerate(explored, start=1)]
+                for i, s in enumerate(explored_states, start=1)]
     else:
-        labels = [str(i) for i in range(1,len(explored)+1)]
+        labels = [str(i) for i in range(1,len(explored_states)+1)]
     for label, x, y in zip(labels, xs, ys):
         #plt.annotate(label, xy=(x, y))
         plt.text(
@@ -271,9 +281,11 @@ def show_search_tree(tree, fringe, explored, costs=None, heuristic=None):
             horizontalalignment='center',
             verticalalignment='center',
             bbox={'facecolor': 'tab:blue', 'pad': 5, 'alpha': 0.95})
-    # mark fringe
+
+
+def draw_fringe_states(fringe, costs=None, heuristic=None):
     xs = [s.spaceship.col + 0.5 for s in fringe]
-    ys = [state.n - s.spaceship.row - 0.5 for s in fringe]
+    ys = [s.n - s.spaceship.row - 0.5 for s in fringe]
     if costs:
         labels = [
             '{order}\nc={cost}'.format(order='?', cost=costs[s])
@@ -296,99 +308,166 @@ def show_search_tree(tree, fringe, explored, costs=None, heuristic=None):
         plt.plot(xs, ys, 's', color='tab:red')
 
 
-def create_tree_search_widget(explored_states, trees, fringes,
+def show_search_tree(initial_state, explored_states, fringe, plans,
+                     costs=None, heuristic=None):
+    current_state = explored_states[-1] or initial_state
+    show_state(current_state)
+    draw_plans_as_edges(initial_state, plans)
+    draw_explored_states(explored_states, costs, heuristic)
+    draw_fringe_states(fringe, costs, heuristic)
+
+
+def create_tree_search_widget(initial_state, explored_states,
+                              plans, fringes,
                               costs=None, heuristic=None,
                               interactive=False):
-    if not trees:
-        print('Zadne stromy k zobrazeni.')
+    if not explored_states:
+        print('Zadne kroky k zobrazeni.')
         return
+
     def show_search_tree_at(step):
-        tree = trees[step]
-        fringe = fringes[step]
         #print('fringe at', step, 'is', str(fringe))
         show_search_tree(
-            tree,
-            fringe=fringe,
+            initial_state=initial_state,
+            explored_states=explored_states[:step+1],
+            fringe=fringes[step],
+            plans=plans[step],
             costs=costs[step] if costs else None,
-            heuristic=heuristic[step] if heuristic else None,
-            explored=explored_states[:step])
+            heuristic=heuristic[step] if heuristic else None)
 
     if interactive:
         step = widgets.IntSlider(
-            min=0, max=len(explored_states),
+            min=0, max=len(explored_states)-1,
             value=0,  #len(explored_states),
             description='Krok')
         return widgets.interact(show_search_tree_at, step=step)
     else:
-        show_search_tree_at(step=len(explored_states))
+        show_search_tree_at(step=len(explored_states)-1)
+
+
+def diff(new_dict, old_dict=None):
+    changes = [
+        (k,v) for k,v in new_dict.items()
+        if not old_dict or k not in old_dict or old_dict[k] != v]
+    if len(changes) == 0:
+        return ''
+    if len(changes) < len(new_dict):
+        template = '+ {changes}'
+    else:
+        template = '{changes}'
+    message = template.format(
+        changes=', '.join(
+            '{k}:{v}'.format(
+                k=str(k), v=str(v) or "''") for k, v in changes))
+    return message
 
 
 class Logger:
     def __init__(self):
-        self.output_text = False
-        self.output_widget = True
+        self.output_text = True
+        self.output_image = True
+        self.output_interactive = False
 
-    def set_output(self, text=False, widget=False):
+    def set_output(self, text=False, image=True, interactive=False):
         self.output_text = text
-        self.output_widget = widget
+        self.output_image = image
+        self.output_interactive = interactive
 
-    def start_search(self, state, costs=False, heuristic=False):
+    def start_search(self, initial_state, costs=False, heuristic=False):
+        self.initial_state = initial_state
         self.explored_states = []
-        self.trees = [{state: None}]
-        self.fringes = [set([state])]
-        self.costs = [{state: 0}] if costs else None
-        # TODO: fix hodnota heuristiky v pocatecnim stavu
-        # (neni jasne jak, mozna post-fix po prvnim zalognuti)
-        self.heuristic = [{state: 0}] if heuristic else None
-        self.log('start search')
+        self.plans = []
+        self.fringes = []
+        self.costs = [] if costs else None
+        self.heuristic = [] if heuristic else None
+        #self.log('start search')
+        self.log_header()
 
-    def end_search(self, interactive=False):
-        create_tree_search_widget(
-            self.explored_states, self.trees, self.fringes,
-            costs=self.costs, heuristic=self.heuristic,
-            interactive=interactive)
+    def end_search(self):
+        if self.output_image:
+            create_tree_search_widget(
+                initial_state=self.initial_state,
+                explored_states=self.explored_states,
+                plans=self.plans,
+                fringes=self.fringes,
+                costs=self.costs,
+                heuristic=self.heuristic,
+                interactive=self.output_interactive)
 
-    def log(self, message):
-        step = len(self.explored_states)
+    @property
+    def row_format(self):
+        row_format = '{explored:<9} {fringe:<20} {plans:<23}'
+        if self.costs is not None:
+            row_format += ' {costs:<20}'
+        if self.heuristic is not None:
+            row_format += ' {heuristic:<5}'
+        return row_format
+
+    def log_header(self):
         if self.output_text:
-            print('{step}: {message}'.format(
-                step=step, message=message))
+            header = self.row_format.format(
+                explored='Explored:',
+                fringe='Fringe:',
+                plans='Plans:',
+                costs='Costs:',
+                heuristic='Heuristic:')
+            print(header)
 
-    def log_search_step(self, explored_state, fringe, costs=None, heuristic=None):
-        # TODO: check type of states from fringe
-        fringe = set(state for state in fringe)
-        last_tree = self.trees[-1]
-        last_fringe = self.fringes[-1]
-        tree = deepcopy(last_tree)
-        #new_explored_states = last_fringe - fringe
-        for action in actions(explored_state):
-            next_state = move(explored_state, action)
-            if next_state in fringe:
-                tree[next_state] = explored_state
-        self.explored_states.append(explored_state)
-        self.trees.append(tree)
+    def log(self, state, fringe, plans, costs=None, heuristic=None):
+        step = str(len(self.explored_states)-1) + ':'
+        if self.output_text:
+            message = self.row_format.format(
+                explored=step+' '+str(state), fringe=fringe, plans=plans,
+                costs=costs, heuristic=heuristic)
+            print(message)
+
+    def log_search_step(self, explored_state, fringe, plans,
+                        costs=None, heuristic=None):
+        if len(self.fringes) >= 1:
+            prev_state = self.explored_states[-1]
+            prev_plans = self.plans[-1]
+            prev_costs = self.costs[-1] if costs else None
+            prev_heuristic = self.heuristic[-1] if heuristic else None
+        else:
+            prev_state = None
+            prev_plans = None
+            prev_costs = None
+            prev_heuristic = None
+        fringe = deepcopy(fringe)
         self.fringes.append(fringe)
-        if self.costs:
+        plans = deepcopy(plans)
+        self.plans.append(plans)
+        self.explored_states.append(deepcopy(explored_state))
+        if self.costs is not None:
             if costs is None:
                 raise ValueError('Zadejte i ceny stavu.')
             self.costs.append(deepcopy(costs))
-        if self.heuristic:
+        if self.heuristic is not None:
             if heuristic is None:
                 raise ValueError('Zadejte i heuristiky.')
             self.heuristic.append(deepcopy(heuristic))
-        self.log(str(fringe))
+        self.log(
+            state=repr(explored_state) if explored_state else '-',
+            fringe=str(list(fringe)),
+            plans=diff(plans, prev_plans),
+            costs=diff(costs, prev_costs) if costs else None,
+            heuristic=diff(heuristic, prev_heuristic) if heuristic else None)
+
 
 
 LOGGER = Logger()
-LOGGER.set_output(text=False, widget=True)
+#LOGGER.set_output(text=False, image=True)
 
 @contextmanager
-def visualize_search(state, interactive=False, costs=False, heuristic=False):
+def visualize_search(state, text=False, image=True, interactive=False,
+                     costs=False, heuristic=False):
+    LOGGER.set_output(text=text, image=image, interactive=interactive)
     LOGGER.start_search(state, costs=costs, heuristic=heuristic)
     yield
-    LOGGER.end_search(interactive=interactive)
+    LOGGER.end_search()
 
 
-def log_search_step(explored_state, fringe, costs=None, heuristic=None):
+def log_search_step(state, fringe, plans, costs=None, heuristic=None):
     LOGGER.log_search_step(
-        explored_state, fringe, costs=costs, heuristic=heuristic)
+        state, fringe=fringe, plans=plans,
+        costs=costs, heuristic=heuristic)

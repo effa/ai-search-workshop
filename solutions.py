@@ -29,17 +29,18 @@ def greedy_search(initial_state):
 def dfs(initial_state):
     stack = [initial_state]
     plans = {initial_state: ''}
+    log_search_step(None, stack, plans)
     while stack:
         state = stack.pop()
         if is_goal(state):
-            log_search_step(state, stack)
+            log_search_step(state, stack, plans)
             return plans[state]
         for action in reversed(actions(state)):
             next_state = move(state, action)
             if next_state not in plans:  # jeste jsme ho nevideli
                 stack.append(next_state)
                 plans[next_state] = plans[state] + action
-        log_search_step(state, stack)
+        log_search_step(state, stack, plans)
 
 
 def bfs(initial_state):
@@ -47,6 +48,7 @@ def bfs(initial_state):
         return ''
     queue = deque([initial_state])
     plans = {initial_state: ''}
+    log_search_step(None, queue, plans)
     while queue:
         state = queue.popleft()
         for action in actions(state):
@@ -56,9 +58,9 @@ def bfs(initial_state):
                 plans[next_state] = plans[state] + action
             # Cilovy test lze provadet uz pri zarazovani do fronty.
             if is_goal(next_state):
-                log_search_step(state, queue)
+                log_search_step(state, queue, plans)
                 return plans[next_state]
-        log_search_step(state, queue)
+        log_search_step(state, queue, plans)
 
 
 ACTION_COSTS = {'l': 3, 'f': 2, 'r': 3}
@@ -67,12 +69,13 @@ def ucs(initial_state):
     fringe = {initial_state}
     costs = {initial_state: 0}
     plans = {initial_state: ''}
+    log_search_step(None, fringe, plans, costs)
     while fringe:
         # Vybirame stav z okraje s nejnizsi cenou:
         state = min(fringe, key=lambda s: costs[s])
         fringe.remove(state)
         if is_goal(state):
-            log_search_step(state, fringe, costs)
+            log_search_step(state, fringe, plans, costs)
             return plans[state]
         for action in actions(state):
             next_state = move(state, action)
@@ -82,7 +85,7 @@ def ucs(initial_state):
                 fringe.add(next_state)
                 costs[next_state] = new_cost
                 plans[next_state] = plans[state] + action
-        log_search_step(state, fringe, costs)
+        log_search_step(state, fringe, plans, costs)
 
 
 def heuristic_distance(state):
@@ -97,11 +100,12 @@ def a_star(initial_state):
     costs = {initial_state: 0}
     heuristic = {initial_state: heuristic_distance(initial_state)}
     plans = {initial_state: ''}
+    log_search_step(None, fringe, plans, costs, heuristic)
     while fringe:
         state = min(fringe, key=lambda s: costs[s] + heuristic[s])
         fringe.remove(state)
         if is_goal(state):
-            log_search_step(state, fringe, costs, heuristic)
+            log_search_step(state, fringe, plans, costs, heuristic)
             return plans[state]
         for action in actions(state):
             next_state = move(state, action)
@@ -113,7 +117,7 @@ def a_star(initial_state):
                 plans[next_state] = plans[state] + action
             if next_state not in heuristic:
                 heuristic[next_state] = heuristic_distance(next_state)
-        log_search_step(state, fringe, costs, heuristic)
+        log_search_step(state, fringe, plans, costs, heuristic)
 
 
 # ----------------------------------------------------------------------------
@@ -124,12 +128,13 @@ def a_star(initial_state):
 def tree_search(initial_state, Fringe=set):
     fringe = Fringe([initial_state])
     plans = {initial_state: ''}
+    log_search_step(None, fringe, plans)
     while fringe:
         # Vyber jednoho stavu z okraje.
         state = fringe.pop()
         # Pokud je tento stav cilovy, muzeme prohledavani ukoncit.
         if is_goal(state):
-            log_search_step(state, fringe)
+            log_search_step(state, fringe, plans)
             return plans[state]
         # Pokud neni, expandujeme tento stav, tj. pridame na okraj
         # vsechny jeho nasledniky.
@@ -137,7 +142,7 @@ def tree_search(initial_state, Fringe=set):
             next_state = move(state, action)
             plans[next_state] = plans[state] + action
             fringe.add(next_state)
-        log_search_step(state, fringe)
+        log_search_step(state, fringe, plans)
 
 
 # Rekurzivni DFS pro stromy (nehlida zacykleni)
