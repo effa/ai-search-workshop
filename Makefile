@@ -2,7 +2,7 @@
 # For isolated environments, see the approaches below.
 install:
 	pip3 install -r requirements.txt --user
-	~/.local/bin/jupyter notebook nbextension enable --py widgetsnbextension --sys-prefix
+	~/.local/bin/jupyter nbextension enable --py widgetsnbextension
 
 run:
 	~/.local/bin/jupyter notebook
