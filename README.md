@@ -3,7 +3,7 @@
 Workshop for *Poznej FI 2018*
 about standard search algorithms for artificial intelligence:
 greedy search, DFS, BFS, UCS, and A\*.
-See the prepared [workshop notebook](./workshop.ipynb) and [solutions](./solutions.py).
+See the prepared [workshop notebooks](./00-planning-in-AI.ipynb) and [solutions](./solutions.py).
 
 
 ## Start
