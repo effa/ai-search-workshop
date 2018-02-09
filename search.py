@@ -43,7 +43,10 @@ class State:
         return self.n - row - 0.5
 
     def is_goal(self):
-        return self.spaceship.row == 0
+        return not self.is_dead() and self.spaceship.row == 0
+
+    def is_dead(self):
+        return self.world.get(self.spaceship, 'A') == 'A'
 
     def show(self):
         show_state(self)
@@ -121,23 +124,20 @@ def move_spaceship(spaceship, action):
 
 
 def move(state, action):
-    # TODO: thow an error if the resulting state is dead (?)
-    # (or allow for representation of dead states)
+    # no action allowed in dead state
+    if state.is_dead():
+        return state
     world = state.world.copy()
     spaceship = move_spaceship(state.spaceship, action)
     if state.is_wormhole(spaceship):
         spaceship = state.get_wormhole_end(spaceship)
-#     world[state.spaceship] = ' '
-#     world[spaceship] = 'S'
     return State(world, spaceship)
 
 
 def actions(state):
     """Return actions that don't lead to dead state.
     """
-    return [
-        a for a in 'lfr'
-        if state.world.get(move_spaceship(state.spaceship, a), 'A') != 'A']
+    return [a for a in 'lfr' if not move(state, a).is_dead()]
 
 
 def is_goal(state):

@@ -1,6 +1,7 @@
 """Reseni ukolu z notebooku.
 """
 from collections import deque
+from itertools import product
 from math import inf
 from search import is_goal, actions, move, log_search_step
 
@@ -18,6 +19,23 @@ def greedy_search(initial_state):
         plan += action
     # Return a complete or a partial path.
     return plan
+
+
+def all_plans_of_length(n):
+    return [''.join(plan) for plan in product('lfr', repeat=n)]
+
+
+def is_correct(initial_state, plan):
+    state = initial_state
+    for action in plan:
+        state = move(state, action)
+    return is_goal(state)
+
+
+def generate_and_test(initial_state):
+    for plan in all_plans_of_length(initial_state.n-1):
+        if is_correct(initial_state, plan):
+            return plan
 
 
 # Nasledujici algoritmus neprochazi vrcholy v korektnim DFS poradi,
