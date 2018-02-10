@@ -42,6 +42,16 @@ class State:
         row = self.spaceship.row
         return self.n - row - 0.5
 
+    @property
+    def height(self):
+        return self.n
+
+    @property
+    def row(self):
+        # Tohle je desny hack, aby slo heuristiku pro A* zadat pochopitelne.
+        # TODO: zkonzistentnit ukladani a prezentaci radku
+        return self.height - self.spaceship.row
+
     def is_goal(self):
         return not self.is_dead() and self.spaceship.row == 0
 

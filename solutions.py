@@ -39,7 +39,7 @@ def generate_and_test(initial_state):
 
 
 # Nasledujici algoritmus neprochazi vrcholy v korektnim DFS poradi,
-# protoze pridava do zasobniku vsechny zkoumaneho stavu najednou
+# protoze pridava do zasobniku vsechny nasledniky zkoumaneho stavu najednou
 # a nikdy podruhe (pro zachovani liearni velikosti zasobniku).
 # Pri hledani cesty k cilovemu stavu to nicemu nevadi, ale je
 # dobre vedet, ze to neni presne DFS a pro nektere jine aplikace
@@ -61,23 +61,76 @@ def dfs(initial_state):
         log_search_step(state, stack, plans)
 
 
+# Tohle je "temer-korektni" iterativni implementace, ktera objevuje vzdy jedineho
+# naslednika a stavy oznacuje za prozkoumane az po objeveni vsech nasledniku.
+# Takto je prezentovan napr. v Algoritmech a datovych strukturach I.
+# Pro optimalni casovou slozitost by se do zasobniku mela ukladat informace,
+# ktereho naslednika budeme objevovat priste, cimz se vyhneme opakovanemu
+# hledani prvniho neobjevenoho naslednika (to by vsak vyzadovalo upravit funkci
+# pro vizualizaci algoritmu).
+def dfs_correct(initial_state):
+    stack = [initial_state]
+    plans = {initial_state: ''}
+    log_search_step(None, stack, plans)
+    while stack:
+        state = stack.pop()
+        if is_goal(state):
+            log_search_step(state, stack, plans)
+            return plans[state]
+        explored = True
+        for action in actions(state):
+            next_state = move(state, action)
+            if next_state not in plans:
+                stack.append(state)
+                stack.append(next_state)
+                plans[next_state] = plans[state] + action
+                explored = False
+                break
+        log_search_step(state if explored else None, stack, plans)
+
+
+# Varianta DFS s nasobnym ukladanim na zasobnik, ktera dosahuje korektniho
+# poradi za cenu trochu komplikovanejsiho kodu a vetsi pametove slozitosti
+# (zasobnik muze mit velikost poctu vsech hran).
+def dfs_multistore(initial_state):
+    stack = [initial_state]
+    plans = {initial_state: ''}
+    explored = set()
+    log_search_step(None, stack, plans)
+    while stack:
+        state = stack.pop()
+        if is_goal(state):
+            log_search_step(state, stack, plans)
+            return plans[state]
+        # kontrola, zda jsme cil uz neprozkoumali
+        if state in explored:
+            continue
+        explored.add(state)
+        for action in reversed(actions(state)):
+            next_state = move(state, action)
+            # nasobne ukladani (neprozkoumane stavy se muzou na zasobniku
+            # objevit vickrat)
+            if next_state not in explored:
+                stack.append(next_state)
+                plans[next_state] = plans[state] + action
+        log_search_step(state, stack, plans)
+
+
 def bfs(initial_state):
-    if is_goal(initial_state):
-        return ''
     queue = deque([initial_state])
     plans = {initial_state: ''}
     log_search_step(None, queue, plans)
     while queue:
         state = queue.popleft()
+        # Cilovy test by u BFS slo provadet uz pri zarazovani do fronty.
+        if is_goal(state):
+            log_search_step(state, queue, plans)
+            return plans[state]
         for action in actions(state):
             next_state = move(state, action)
             if next_state not in plans:
                 queue.append(next_state)
                 plans[next_state] = plans[state] + action
-            # Cilovy test lze provadet uz pri zarazovani do fronty.
-            if is_goal(next_state):
-                log_search_step(state, queue, plans)
-                return plans[next_state]
         log_search_step(state, queue, plans)
 
 
