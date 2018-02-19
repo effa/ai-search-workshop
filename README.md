@@ -1,27 +1,42 @@
-# Planning in AI
+# Plánování v umělé inteligenci
 
-Workshop for *Poznej FI 2018*
-about standard search algorithms for artificial intelligence:
-greedy search, DFS, BFS, UCS, and A\*.
-See the prepared [workshop notebooks](./00-planning-in-AI.ipynb) and [solutions](./solutions.py).
+Workshop na *Poznej FI 2018*
+o základních algoritmech pro plánování v umělé inteligenci:
+hladové plánování, generuj a testuj,
+DFS, BFS, UCS a A\*.
+GitHub umí [připravené notebooky](./00-planning-in-AI.ipynb)
+renderovat, ale interaktivní verze je lepší.
+V repozitáři najdete i [vzorová řešení](./solutions.py).
 
+## Start na FI
 
-## Start
+1. Otevřete terminál: `Ctrl+Alt+t`
 
-1. Prerequisites: Python 3, (optional: git).
-
-2. Clone or download the project repository:
+2. Stáhněte si repozitář:
 
         $ git clone https://github.com/effa/ai-search-workshop.git
 
-3. To install required Python packages directly, use:
+3. Přidejte modul s potřebnými balíčky pro Python 3:
 
-        $ cd ai-search-workshop
-        $ make install
+        $ module add python3
 
-  Optionally, you may first create an isolated environment
-  (using Python3 venv, virtualenv, or Anaconda, see Makefile for details).
+4. Otevřete připravený *jupyter notebook*:
 
-4. Open prepared notebook:
+        $ jupyter notebook
 
-        $ make run
+## Start doma
+
+1. Stáhněte si repozitář (tlačítko "Clone or download").
+
+2. Nainstalujte si Python 3
+   a balíčky uvedené v [requirements.txt](./requirements.txt),
+   např. pomocí [anacondy](https://www.anaconda.com/download).
+   (Jiné možnosti viz [Makefile](./Makefile).
+   Pokud nepoužijte anacondu, bude ještě potřeba aktivovat rozšíření
+   pro interaktivní widgety. Je to jeden příkaz, jehož konkrétní podoba závisí
+   na použitém způsobu instalace balíčků, viz Makefile.)
+   Kdybyste narazili na problém, tak mi napište a vyřešíme ho.
+
+3. Otevřete připravený *jupyter notebook*:
+
+        $ jupyter notebook
