@@ -134,6 +134,8 @@ def move_spaceship(spaceship, action):
 
 
 def move(state, action):
+    """Return a new state that is a result of applying `action` in `state`.
+    """
     # no action allowed in dead state
     if state.is_dead():
         return state
@@ -145,12 +147,14 @@ def move(state, action):
 
 
 def actions(state):
-    """Return actions that don't lead to dead state.
+    """Return list of actions that don't lead to dead state.
     """
     return [a for a in 'lfr' if not move(state, a).is_dead()]
 
 
 def is_goal(state):
+    """Return True iff `state` is a goal state.
+    """
     # DISQ: Rozmyslet, zde je pro zacatecniky vhodnejsi
     # methoda state.is_goal() nebo funkce is_goal(state).
     return state.is_goal()
@@ -167,6 +171,8 @@ IMAGES = {
 
 
 def show_state(state):
+    """Draw graphical representation of given state.
+    """
     # Requires %matplotlib inline mode to work
     width, height = state.m, state.n
     fig, ax = plt.subplots(figsize=(width, height))
@@ -221,6 +227,8 @@ def draw_move(start, end, style='o-', color='tab:green'):
 
 
 def show_plan(state, plan, interactive=False):
+    """Draw graphical representation of given plan starting in given state.
+    """
     plan = plan or ''
     if type(plan) != str:
         raise ValueError("Plan musi byt retezec akci.")
@@ -471,6 +479,10 @@ LOGGER = Logger()
 @contextmanager
 def visualize_search(state, text=False, image=True, interactive=False,
                      costs=False, heuristic=False):
+    """Draw graphical representation of a search process starting from `state`.
+
+    Use `log_search_step()` to indicate each search step.
+    """
     LOGGER.set_output(text=text, image=image, interactive=interactive)
     LOGGER.start_search(state, costs=costs, heuristic=heuristic)
     yield
@@ -478,6 +490,9 @@ def visualize_search(state, text=False, image=True, interactive=False,
 
 
 def log_search_step(state, fringe, plans, costs=None, heuristic=None):
+    """Log a single search step: explored state, current fringe, plans
+       and possibly also costs and heuristic.
+    """
     LOGGER.log_search_step(
         state, fringe=fringe, plans=plans,
         costs=costs, heuristic=heuristic)
