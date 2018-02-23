@@ -30,12 +30,16 @@ V repozitáři najdete i [vzorová řešení](./solutions.py).
 
 2. Nainstalujte si Python 3
    a balíčky uvedené v [requirements.txt](./requirements.txt),
-   např. pomocí [anacondy](https://www.anaconda.com/download).
-   (Jiné možnosti viz [Makefile](./Makefile).
-   Pokud nepoužijte anacondu, bude ještě potřeba aktivovat rozšíření
+   např. pomocí [Anacondy](https://www.anaconda.com/download).
+   Balíčky v Anacondě nainstalujete buď klikáním v grafickém rozhraní *Anaconda Navigator*, nebo v přikazové řádce:
+
+        $ conda install ipywidgets=7.1.0 jupyter=1.0.0 matplotlib=2.1.2 numpy=1.14.0
+
+   (Alternativní možnosti instalace viz [Makefile](./Makefile).
+   Pokud nepoužijte Anacondu, bude ještě potřeba aktivovat rozšíření
    pro interaktivní widgety. Je to jeden příkaz, jehož konkrétní podoba závisí
-   na použitém způsobu instalace balíčků, viz Makefile.)
-   Kdybyste narazili na problém, tak mi napište a vyřešíme ho.
+   na použitém způsobu instalace balíčků, viz Makefile.
+   Kdybyste narazili na problém, tak mi napište a vyřešíme ho.)
 
 3. Otevřete připravený *jupyter notebook*:
 
